@@ -2821,7 +2821,7 @@ export const AssignmentCreator = () => {
               />
             </div>
 
-            <div className="border-t pt-4">
+            {/* <div className="border-t pt-4">
               <h4 className="font-medium mb-3">Metadata</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {["subject", "grade", "standard", "lesson", "difficulty"].map(
@@ -2849,7 +2849,7 @@ export const AssignmentCreator = () => {
                   )
                 )}
               </div>
-            </div>
+            </div> */}
           </div>
         );
       default:
