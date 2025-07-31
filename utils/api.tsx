@@ -1,5 +1,5 @@
-const QTI_API_BASE_URL = "https://qti-staging.alpha-1edtech.com/api";
-const ONEROSTER_API_BASE_URL = "https://api.staging.alpha-1edtech.com";
+const QTI_API_BASE_URL = "https://qti.alpha-1edtech.com/api";
+const ONEROSTER_API_BASE_URL = "https://api.alpha-1edtech.com";
 //@ts-ignore
 export const api = {
   authFetch: async (url, options = {}, token) => {
