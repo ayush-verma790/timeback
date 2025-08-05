@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gapless PDF Viewer (Centered)</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 1rem;
+      font-family: sans-serif;
+      background: #f4f4f4;
+    }
+    #controls {
+      margin-bottom: 1rem;
+    }
+    #pdf-container {
+      background: white;
+      padding: 0;
+      margin: 0 auto;
+      max-width: 100%;
+      line-height: 0;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      padding: 0;
+      border: none;
+    }
+    button {
+      margin-left: 10px;
+      padding: 0.4rem 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<div id="controls">
+  <input type="file" id="pdf-upload" accept="application/pdf">
+  <button onclick="downloadHTML()">Download HTML</button>
+</div>
+
+<div id="pdf-container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<script>
+  const container = document.getElementById('pdf-container');
+  let canvases = [];
+
+  document.getElementById('pdf-upload').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function () {
+      const typedarray = new Uint8Array(this.result);
+      pdfjsLib.getDocument(typedarray).promise.then(function (pdf) {
+        container.innerHTML = '';
+        canvases = [];
+        const renderPromises = [];
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          renderPromises.push(
+            pdf.getPage(i).then(function (page) {
+              const scale = 1.5;
+              const viewport = page.getViewport({ scale });
+
+              const canvas = document.createElement('canvas');
+              const context = canvas.getContext('2d');
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+
+              return page.render({ canvasContext: context, viewport: viewport }).promise.then(() => {
+                const trimmedCanvas = trimBottomOnly(canvas);
+                container.appendChild(trimmedCanvas);
+                canvases.push(trimmedCanvas);
+              });
+            })
+          );
+        }
+
+        Promise.all(renderPromises).then(() => {
+          console.log("Rendering complete.");
+        });
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  function trimBottomOnly(canvas) {
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    let lastVisibleY = height - 1;
+
+    for (let y = height - 1; y >= 0; y--) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        if (!(data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255 && data[i + 3] === 255)) {
+          lastVisibleY = y;
+          y = -1;
+          break;
+        }
+      }
+    }
+
+    const trimmedHeight = lastVisibleY + 1;
+
+    const trimmedCanvas = document.createElement('canvas');
+    trimmedCanvas.width = width;
+    trimmedCanvas.height = trimmedHeight;
+    const trimmedCtx = trimmedCanvas.getContext('2d');
+    trimmedCtx.drawImage(canvas, 0, 0, width, trimmedHeight, 0, 0, width, trimmedHeight);
+
+    return trimmedCanvas;
+  }
+
+  function downloadHTML() {
+    let htmlImages = canvases.map(c => {
+      const dataURL = c.toDataURL();
+      return `<img src="${dataURL}" style="display:block; margin: 0 auto; max-width:100%; height:auto;">`;
+    }).join('\n');
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Converted PDF</title>
+  <style>
+    body { margin: 0; padding: 0; background: #fff; }
+    img { display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+${htmlImages}
+</body>
+</html>
+    `.trim();
+
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "gapless.html";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  }
+</script>
+
+</body>
+</html>
