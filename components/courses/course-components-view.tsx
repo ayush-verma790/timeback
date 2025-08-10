@@ -118,12 +118,21 @@ export const CourseComponentsView = () => {
   const [pendingNewComponents, setPendingNewComponents] = useState([]);
   const [showUnitForm, setShowUnitForm] = useState(false);
   const [showGlobalComponentForm, setShowGlobalComponentForm] = useState(false);
+  const [showSubcomponentForm, setShowSubcomponentForm] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     sortOrder: 1,
     unlockDate: "",
     prerequisiteCriteria: "ALL",
     prerequisites: [],
+  });
+  const [subcomponentFormData, setSubcomponentFormData] = useState({
+    title: "",
+    sortOrder: 1,
+    unlockDate: "",
+    prerequisiteCriteria: "ALL",
+    prerequisites: [],
+    parentComponent: "",
   });
   const [response, setResponse] = useState<any>(null);
   const [copied, setCopied] = useState(false);
@@ -137,6 +146,14 @@ export const CourseComponentsView = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubcomponentInputChange = (e) => {
+    const { name, value } = e.target;
+    setSubcomponentFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -178,6 +195,51 @@ export const CourseComponentsView = () => {
     }
   };
 
+  const handleCreateSubcomponent = async () => {
+    // Validate that parent component is provided
+    if (!subcomponentFormData.parentComponent || !subcomponentFormData.parentComponent.trim()) {
+      alert("Parent Component is required for subcomponents");
+      return;
+    }
+
+    try {
+      const payload = {
+        courseComponent: {
+          ...subcomponentFormData,
+          sourcedId: `new-${Date.now()}`,
+          status: "active",
+          dateLastModified: new Date().toISOString(),
+          courseSourcedId: editingCourseComponentId,
+          course: { sourcedId: editingCourseComponentId },
+          parent: subcomponentFormData.parentComponent 
+            ? { sourcedId: subcomponentFormData.parentComponent }
+            : null,
+          prerequisites: subcomponentFormData.prerequisites,
+          prerequisiteCriteria: subcomponentFormData.prerequisiteCriteria,
+          unlockDate: subcomponentFormData.unlockDate
+            ? new Date(subcomponentFormData.unlockDate).toISOString()
+            : null,
+        },
+      };
+
+      const res = await createUnit(payload);
+      setResponse(res); // Save the response to state
+      setCopied(false); // Reset copied state
+      setShowSubcomponentForm(false);
+      setSubcomponentFormData({
+        title: "",
+        sortOrder: 1,
+        unlockDate: "",
+        prerequisiteCriteria: "ALL",
+        prerequisites: [],
+        parentComponent: "",
+      });
+    } catch (error) {
+      // toast.error("Failed to create subcomponent");
+      console.error(error);
+    }
+  };
+
   const handleCopyResponse = async () => {
     if (response) {
       await navigator.clipboard.writeText(JSON.stringify(response, null, 2));
@@ -202,6 +264,12 @@ export const CourseComponentsView = () => {
             className="flex items-center gap-2 bg-purple-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-purple-700 shadow-sm transition-colors"
           >
             <Plus className="w-5 h-5" /> Create Component
+          </button>
+          <button
+            onClick={() => setShowSubcomponentForm(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm transition-colors"
+          >
+            <Plus className="w-5 h-5" /> Create Subcomponent
           </button>
           <button
             // onClick={handleSaveCourse}
@@ -362,6 +430,126 @@ export const CourseComponentsView = () => {
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Create Component
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subcomponent Form Modal */}
+      {showSubcomponentForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Create Subcomponent</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={subcomponentFormData.title}
+                  onChange={handleSubcomponentInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Parent Component <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="parentComponent"
+                  value={subcomponentFormData.parentComponent}
+                  onChange={handleSubcomponentInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="Enter parent component ID"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sort Order
+                </label>
+                <input
+                  type="number"
+                  name="sortOrder"
+                  value={subcomponentFormData.sortOrder}
+                  onChange={handleSubcomponentInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  min="1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unlock Date
+                </label>
+                <input
+                  type="datetime-local"
+                  name="unlockDate"
+                  value={subcomponentFormData.unlockDate}
+                  onChange={handleSubcomponentInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prerequisite Criteria
+                </label>
+                <select
+                  name="prerequisiteCriteria"
+                  value={subcomponentFormData.prerequisiteCriteria}
+                  onChange={handleSubcomponentInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="ALL">ALL</option>
+                  <option value="ANY">ANY</option>
+                  <option value="NONE">NONE</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prerequisites (comma separated IDs)
+                </label>
+                <input
+                  type="text"
+                  name="prerequisites"
+                  value={subcomponentFormData.prerequisites.join(",")}
+                  onChange={(e) => {
+                    const ids = e.target.value
+                      .split(",")
+                      .filter((id) => id.trim());
+                    setSubcomponentFormData((prev) => ({
+                      ...prev,
+                      prerequisites: ids,
+                    }));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="comp1,comp2,comp3"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowSubcomponentForm(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSubcomponent}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Create Subcomponent
               </button>
             </div>
           </div>

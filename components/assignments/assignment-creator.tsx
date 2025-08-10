@@ -165,6 +165,34 @@ const getPrefilledQuestion = (type: string) => {
         label: "Museum",
       },
     ],
+    // XML field for XML question type
+    xml: `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item
+  xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqtiasi_v3p0 https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0_v1p0.xsd"
+  identifier="xml-example-${Date.now()}"
+  title="Sample XML Question"
+  adaptive="false"
+  time-dependent="false">
+  
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+    <qti-correct-response>
+      <qti-value>CHOICE_A</qti-value>
+    </qti-correct-response>
+  </qti-response-declaration>
+
+  <qti-item-body>
+    <div>
+      <p>What is the capital of France?</p>
+    </div>
+    <qti-choice-interaction response-identifier="RESPONSE" shuffle="false" max-choices="1">
+      <qti-simple-choice identifier="CHOICE_A">Paris</qti-simple-choice>
+      <qti-simple-choice identifier="CHOICE_B">London</qti-simple-choice>
+      <qti-simple-choice identifier="CHOICE_C">Berlin</qti-simple-choice>
+    </qti-choice-interaction>
+  </qti-item-body>
+</qti-assessment-item>`,
   };
 
   const examples = {
@@ -599,9 +627,9 @@ export const AssignmentCreator = () => {
   });
 
   // Dynamic Question Builder State
-  const [questionType, setQuestionType] = useState("choice");
+  const [questionType, setQuestionType] = useState("xml");
   const [questionForm, setQuestionForm] = useState(
-    getPrefilledQuestion("choice")
+    getPrefilledQuestion("xml")
   );
 
   // Helper function to extract and normalize items from API responses
@@ -3102,109 +3130,86 @@ export const AssignmentCreator = () => {
               </select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* @ts-ignore */}
-              <InputField
-                label="Identifier"
-                value={questionForm.identifier}
-                onChange={(e) =>
-                  setQuestionForm((prev) => ({
-                    ...prev,
-                    identifier: e.target.value,
-                  }))
-                }
-              />
-              {/* @ts-ignore */}
-              <InputField
-                label="Title"
-                value={questionForm.title}
-                onChange={(e) =>
-                  setQuestionForm((prev) => ({
-                    ...prev,
-                    title: e.target.value,
-                  }))
-                }
-              />
-            </div>
+            {/* Only show basic form fields if not XML type */}
+            {questionType !== "xml" && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* @ts-ignore */}
+                  <InputField
+                    label="Identifier"
+                    value={questionForm.identifier}
+                    onChange={(e) =>
+                      setQuestionForm((prev) => ({
+                        ...prev,
+                        identifier: e.target.value,
+                      }))
+                    }
+                  />
+                  {/* @ts-ignore */}
+                  <InputField
+                    label="Title"
+                    value={questionForm.title}
+                    onChange={(e) =>
+                      setQuestionForm((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Prompt
-              </label>
-              <textarea
-                value={questionForm.prompt}
-                onChange={(e) =>
-                  setQuestionForm((prev) => ({
-                    ...prev,
-                    prompt: e.target.value,
-                  }))
-                }
-                rows={3}
-                className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Prompt
+                  </label>
+                  <textarea
+                    value={questionForm.prompt}
+                    onChange={(e) =>
+                      setQuestionForm((prev) => ({
+                        ...prev,
+                        prompt: e.target.value,
+                      }))
+                    }
+                    rows={3}
+                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
 
-            {/* Stimulus Identifier Field */}
-            <div>
-              <label
-                htmlFor="stimulusIdentifier"
-                className="block text-sm font-medium text-slate-700 mb-1"
-              >
-                Stimulus Identifier (Optional)
-              </label>
-              <select
-                id="stimulusIdentifier"
-                value={questionForm.stimulusIdentifier}
-                onChange={(e) =>
-                  setQuestionForm((prev) => ({
-                    ...prev,
-                    stimulusIdentifier: e.target.value,
-                  }))
-                }
-                className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">-- Select an existing stimulus --</option>
-                {stimuli.map((s) => (
-                  <option key={s.identifier} value={s.identifier}>
-                    {s.title} ({s.identifier})
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-slate-500 mt-1">
-                Select an existing stimulus or leave blank if no stimulus is
-                needed.
-              </p>
-            </div>
+                {/* Stimulus Identifier Field */}
+                <div>
+                  <label
+                    htmlFor="stimulusIdentifier"
+                    className="block text-sm font-medium text-slate-700 mb-1"
+                  >
+                    Stimulus Identifier (Optional)
+                  </label>
+                  <select
+                    id="stimulusIdentifier"
+                    value={questionForm.stimulusIdentifier}
+                    onChange={(e) =>
+                      setQuestionForm((prev) => ({
+                        ...prev,
+                        stimulusIdentifier: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">-- Select an existing stimulus --</option>
+                    {stimuli.map((s) => (
+                      <option key={s.identifier} value={s.identifier}>
+                        {s.title} ({s.identifier})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Select an existing stimulus or leave blank if no stimulus is
+                    needed.
+                  </p>
+                </div>
+              </>
+            )}
 
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">Metadata</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {["subject", "grade", "standard", "lesson", "difficulty"].map(
-                  (field) => (
-                    // @ts-ignore
-                    <InputField
-                      key={field}
-                      label={field.charAt(0).toUpperCase() + field.slice(1)}
-                      value={
-                        questionForm.metadata[
-                          field as keyof typeof questionForm.metadata
-                        ]
-                      }
-                      onChange={(e) =>
-                        setQuestionForm((prev) => ({
-                          ...prev,
-                          metadata: {
-                            ...prev.metadata,
-                            [field]: e.target.value,
-                          },
-                        }))
-                      }
-                      required={false}
-                    />
-                  )
-                )}
-              </div>
-            </div>
+          
 
             <div className="border-t pt-4">{renderQuestionForm()}</div>
 

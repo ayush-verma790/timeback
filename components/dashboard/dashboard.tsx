@@ -5,7 +5,7 @@ import { Library, Briefcase } from "lucide-react"
 import { AppContext } from "../../context/app-context"
 
 export const Dashboard = () => {
-  const { navigateTo } = useContext(AppContext)
+  const { navigateTo }:any = useContext(AppContext)
 
   return (
     <div className="max-w-4xl mx-auto">
