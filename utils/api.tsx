@@ -196,6 +196,13 @@ export const api = {
       t
     ),
 
+  deleteResource: (id, t) =>
+    api.authFetch(
+      `${ONEROSTER_API_BASE_URL}/ims/oneroster/resources/v1p2/resources/${id}`,
+      { method: "DELETE" },
+      t
+    ),
+
   getResources: (params = {}, t) => {
     const {
       offset = 0,

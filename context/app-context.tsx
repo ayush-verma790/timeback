@@ -118,7 +118,7 @@ export const AppProvider = ({ children }) => {
     },
     [handleApiCall, resourcePagination.limit]
   );
-
+ 
   // New function to fetch all course components
   const fetchAllCourseComponents = useCallback(
     async (page = 1, limit = allCourseComponentsPagination.limit) => {
@@ -336,21 +336,38 @@ numberFields.forEach((field) => {
     }
   };
 
-  const associateResource = async (componentId, resourceId, title) => {
+  const associateResource = async (componentId, resourceId, title, sortOrder = 1) => {
     try {
       const payload = {
         componentResource: {
           sourcedId: `comp-res-${componentId}-${resourceId}-${Date.now()}`,
           status: "active",
           title: title,
+          sortOrder: sortOrder,
           courseComponent: { sourcedId: componentId },
           resource: { sourcedId: resourceId },
         },
       };
-      await handleApiCall(api.associateResourceToCourse, payload);
+      const result = await handleApiCall(api.associateResourceToCourse, payload);
       addToast("Resource associated successfully!", "success");
+      return result;
     } catch (err) {
       console.error("Failed to associate resource:", err);
+      addToast("Failed to associate resource.", "error");
+      throw err;
+    }
+  };
+
+  const deleteResource = async (resourceId) => {
+    try {
+      const result = await handleApiCall(api.deleteResource, resourceId);
+      addToast("Resource deleted successfully!", "success");
+      fetchResources(resourcePagination.currentPage);
+      return result;
+    } catch (err) {
+      console.error("Failed to delete resource:", err);
+      addToast("Failed to delete resource.", "error");
+      throw err;
     }
   };
 
@@ -520,6 +537,7 @@ numberFields.forEach((field) => {
     navigateTo,
     resources,
     addResource,
+    deleteResource,
     courses,
     addCourse,
     deleteCourse,

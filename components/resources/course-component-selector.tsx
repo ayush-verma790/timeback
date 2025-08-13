@@ -8,7 +8,7 @@ import { api } from "../../utils/api"
 export const CourseComponentSelector = ({ course, selectedComponent, onSelectComponent }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [components, setComponents] = useState([])
-  const { handleApiCall } = useContext(AppContext)
+  const { handleApiCall }:any = useContext(AppContext)
 
   const fetchComponents = async () => {
     if (!isOpen) {

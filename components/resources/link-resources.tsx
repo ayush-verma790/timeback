@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useContext, useEffect } from "react"
-import { LinkIcon, RefreshCw, Folder, FileIcon, Search } from "lucide-react"
+import { LinkIcon, RefreshCw, Folder, FileIcon, Search, Copy, Check } from "lucide-react"
 import { AppContext } from "../../context/app-context"
 import { Pagination } from "../common/pagination"
 
@@ -29,6 +29,9 @@ export const LinkResources = () => {
   const [isSearchingComponent, setIsSearchingComponent] = useState(false)
   const [displayedResources, setDisplayedResources] = useState([])
   const [displayedComponents, setDisplayedComponents] = useState([])
+  const [sortOrder, setSortOrder] = useState("")
+  const [linkResult, setLinkResult] = useState(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     fetchAllCourseComponents(allCourseComponentsPagination.currentPage, allCourseComponentsPagination.limit)
@@ -42,17 +45,28 @@ export const LinkResources = () => {
     setDisplayedComponents(allCourseComponents)
   }, [allCourseComponents])
 
+  const handleCopy = () => {
+    if (!linkResult) return
+    navigator.clipboard.writeText(JSON.stringify(linkResult, null, 2))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const handleAssociate = async () => {
-    if (selectedResource && selectedComponent) {
+    if (selectedResource && selectedComponent && sortOrder.trim()) {
       try {
-        await associateResource(
+        const result = await associateResource(
           selectedComponent.sourcedId, 
           selectedResource.sourcedId, 
-          selectedResource.title
+          selectedResource.title,
+          parseInt(sortOrder)
         )
-        addToast('Resource associated successfully!', 'success')
+        setLinkResult(result)
+        console.log(result)
         setSelectedResource(null)
         setSelectedComponent(null)
+        setSortOrder("")
+        setCopied(false)
       } catch (error) {
         addToast('Failed to associate resource', 'error')
       }
@@ -132,6 +146,8 @@ export const LinkResources = () => {
               fetchAllCourseComponents(allCourseComponentsPagination.currentPage)
               setResourceSearchId("")
               setComponentSearchId("")
+              setLinkResult(null)
+              setCopied(false)
               addToast('Lists refreshed', 'success')
             }}
             className="flex items-center gap-2 bg-slate-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-700 shadow-sm transition-colors"
@@ -272,7 +288,7 @@ export const LinkResources = () => {
 
       {/* Association Action */}
       <div className="mt-8 flex justify-center">
-        <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+        <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 w-full max-w-2xl">
           {selectedResource && selectedComponent && (
             <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
               <h4 className="font-medium text-green-800 mb-2">Ready to Associate:</h4>
@@ -285,16 +301,110 @@ export const LinkResources = () => {
             </div>
           )}
 
+          <div className="mb-4">
+            <label htmlFor="sortOrder" className="block text-sm font-medium text-slate-700 mb-2">
+              Sort Order *
+            </label>
+            <input
+              type="number"
+              id="sortOrder"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              min="1"
+              required
+              className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              placeholder="Enter sort order (e.g., 1, 2, 3...)"
+            />
+            <p className="text-xs text-slate-500 mt-1">Required: Determines the order in which resources appear in the component</p>
+          </div>
+
           <button
             onClick={handleAssociate}
-            disabled={!selectedResource || !selectedComponent}
-            className="flex items-center gap-2 bg-green-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 shadow-md transition-all"
+            disabled={!selectedResource || !selectedComponent || !sortOrder.trim()}
+            className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 shadow-md transition-all"
           >
             <LinkIcon className="w-5 h-5" />
             Associate Resource to Component
           </button>
         </div>
       </div>
+
+      {/* Link Result Display */}
+      {linkResult && (
+        <div className="mt-6 flex justify-center">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-6 w-full max-w-2xl">
+            <h3 className="text-lg font-semibold text-green-800 mb-4">
+              Association Successful!
+            </h3>
+
+            {/* Display Source IDs if available */}
+            {linkResult.sourcedIdPairs && (
+              <div className="mb-4 space-y-2">
+                <div className="flex items-center justify-between p-3 bg-white border border-green-300 rounded-md">
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Supplied Source ID:</span>
+                    <code className="block text-xs text-blue-600 mt-1">{linkResult.sourcedIdPairs.suppliedSourcedId}</code>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(linkResult.sourcedIdPairs.suppliedSourcedId)
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 2000)
+                    }}
+                    className="flex items-center gap-1 text-sm text-green-600 hover:text-green-800"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-white border border-green-300 rounded-md">
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Allocated Source ID:</span>
+                    <code className="block text-xs text-purple-600 mt-1">{linkResult.sourcedIdPairs.allocatedSourcedId}</code>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(linkResult.sourcedIdPairs.allocatedSourcedId)
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 2000)
+                    }}
+                    className="flex items-center gap-1 text-sm text-green-600 hover:text-green-800"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between p-3 bg-white border border-green-300 rounded-md mb-4">
+              <span className="text-sm text-gray-700">Copy Full Result</span>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 text-sm text-green-600 hover:text-green-800"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copy JSON</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="bg-gray-50 rounded-md p-4">
+              <h4 className="font-medium text-gray-700 mb-2">Full Association Result:</h4>
+              <pre className="text-xs bg-white p-3 rounded border border-gray-200 overflow-x-auto">
+                {JSON.stringify(linkResult, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
