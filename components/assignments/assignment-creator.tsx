@@ -1638,6 +1638,7 @@ export const AssignmentCreator = () => {
       const result = await handleApiCall(api.createAssessmentItem, payload);
 
       if (result) {
+        //@ts-ignore
         const questionId = result.identifier || payload.identifier;
         setCreatedIds((prev) => ({
           ...prev,

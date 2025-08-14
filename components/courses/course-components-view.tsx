@@ -147,7 +147,7 @@ export const CourseComponentsView = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'sortOrder' ? Number(value) || 1 : value,
     }));
   };
 
@@ -155,7 +155,7 @@ export const CourseComponentsView = () => {
     const { name, value } = e.target;
     setSubcomponentFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'sortOrder' ? Number(value) || 1 : value,
     }));
   };
 
@@ -164,6 +164,7 @@ export const CourseComponentsView = () => {
       const payload = {
         courseComponent: {
           ...formData,
+          sortOrder: Number(formData.sortOrder), // Convert to number
           sourcedId: `new-${Date.now()}`,
           status: "active",
           dateLastModified: new Date().toISOString(),
@@ -206,6 +207,7 @@ export const CourseComponentsView = () => {
       const payload = {
         courseComponent: {
           ...subcomponentFormData,
+          sortOrder: Number(subcomponentFormData.sortOrder), // Convert to number
           sourcedId: `new-${Date.now()}`,
           status: "active",
           dateLastModified: new Date().toISOString(),
@@ -361,7 +363,7 @@ export const CourseComponentsView = () => {
                   value={formData.sortOrder}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  min="1"
+                  min='0'
                 />
               </div>
 

@@ -371,6 +371,19 @@ numberFields.forEach((field) => {
     }
   };
 
+  const updateResource = async (resourceId, resourceData) => {
+    try {
+      const result = await handleApiCall(api.updateOneRosterResource, resourceId, resourceData);
+      addToast("Resource updated successfully!", "success");
+      fetchResources(resourcePagination.currentPage);
+      return result;
+    } catch (err) {
+      console.error("Failed to update resource:", err);
+      addToast("Failed to update resource.", "error");
+      throw err;
+    }
+  };
+
   const navigateTo = async (viewName, id = null) => {
     if (viewName === "courseComponentsViewss" && id) {
       setIsLoading(true);
@@ -538,6 +551,7 @@ numberFields.forEach((field) => {
     resources,
     addResource,
     deleteResource,
+    updateResource,
     courses,
     addCourse,
     deleteCourse,

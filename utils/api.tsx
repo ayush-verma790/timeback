@@ -1,5 +1,5 @@
-const QTI_API_BASE_URL = "https://qti.alpha-1edtech.com/api";
-const ONEROSTER_API_BASE_URL = "https://api.alpha-1edtech.com";
+const QTI_API_BASE_URL = "https://qti.staging.alpha-1edtech.com/api";
+const ONEROSTER_API_BASE_URL = "https://api.staging.alpha-1edtech.com";
 //@ts-ignore
 export const api = {
   authFetch: async (url, options = {}, token) => {
@@ -243,10 +243,31 @@ export const api = {
       t
     ),
 
+  updateOneRosterResource: (sourcedId, d, t) =>
+    api.authFetch(
+      `${ONEROSTER_API_BASE_URL}/ims/oneroster/resources/v1p2/resources/${sourcedId}`,
+      { method: "PUT", body: JSON.stringify(d) },
+      t
+    ),
+
   getCourseComponentById: (sourcedId, t) =>
     api.authFetch(
       `${ONEROSTER_API_BASE_URL}/ims/oneroster/rostering/v1p2/courses/components/${sourcedId}`,
       {},
+      t
+    ),
+
+  getResourceComponent: (sourcedId, t) =>
+    api.authFetch(
+      `${ONEROSTER_API_BASE_URL}/ims/oneroster/rostering/v1p2/courses/component-resources/${sourcedId}`,
+      {},
+      t
+    ),
+
+  updateResourceComponent: (sourcedId, d, t) =>
+    api.authFetch(
+      `${ONEROSTER_API_BASE_URL}/ims/oneroster/rostering/v1p2/courses/component-resources/${sourcedId}`,
+      { method: "PUT", body: JSON.stringify(d) },
       t
     ),
 };

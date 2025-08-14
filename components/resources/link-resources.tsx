@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useContext, useEffect } from "react"
-import { LinkIcon, RefreshCw, Folder, FileIcon, Search, Copy, Check } from "lucide-react"
+import { LinkIcon, RefreshCw, Folder, FileIcon, Search, Copy, Check, Edit, X } from "lucide-react"
 import { AppContext } from "../../context/app-context"
 import { Pagination } from "../common/pagination"
+import { api } from "../../utils/api"
 
 export const LinkResources = () => {
   const {
@@ -18,6 +19,7 @@ export const LinkResources = () => {
     setAllCourseComponentsPagination,
     fetchResourceBySourcedId,
     fetchComponentBySourcedId,
+    handleApiCall,
     addToast
   } :any= useContext(AppContext)
 
@@ -32,6 +34,20 @@ export const LinkResources = () => {
   const [sortOrder, setSortOrder] = useState("")
   const [linkResult, setLinkResult] = useState(null)
   const [copied, setCopied] = useState(false)
+
+  // Update Modal State
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  const [updateData, setUpdateData] = useState({
+    sourcedId: "",
+    status: "",
+    title: "",
+    sortOrder: "",
+    courseComponent: { sourcedId: "" },
+    resource: { sourcedId: "" }
+  })
+  const [isLoadingUpdate, setIsLoadingUpdate] = useState(false)
+  const [updateResult, setUpdateResult] = useState(null)
+  const [rawApiResponse, setRawApiResponse] = useState(null) // For debugging
 
   useEffect(() => {
     fetchAllCourseComponents(allCourseComponentsPagination.currentPage, allCourseComponentsPagination.limit)
@@ -135,11 +151,102 @@ export const LinkResources = () => {
     }
   }
 
+  const handleGetResourceComponent = async () => {
+    if (!updateData.sourcedId.trim()) {
+      addToast('Please enter a resource component ID', 'warning')
+      return
+    }
+
+    setIsLoadingUpdate(true)
+    try {
+      const result = await handleApiCall(api.getResourceComponent, updateData.sourcedId.trim())
+      console.log('API Response:', result) // Debug log
+      setRawApiResponse(result) // Store for debugging
+      
+      if (result) {
+        // Handle different possible response structures
+        const data = result.componentResource || result.resourceComponent || result
+        console.log('Extracted data:', data) // Debug log
+        
+        setUpdateData({
+          sourcedId: data.sourcedId || updateData.sourcedId,
+          status: data.status || "",
+          title: data.title || "",
+          sortOrder: data.sortOrder?.toString() || "",
+          courseComponent: { 
+            sourcedId: data.courseComponent?.sourcedId || "" 
+          },
+          resource: { 
+            sourcedId: data.resource?.sourcedId || "" 
+          }
+        })
+        addToast('Resource component data loaded!', 'success')
+      } else {
+        addToast('Resource component not found', 'warning')
+      }
+    } catch (error) {
+      console.error('Error fetching resource component:', error)
+      addToast('Error fetching resource component', 'error')
+    } finally {
+      setIsLoadingUpdate(false)
+    }
+  }
+
+  const handleUpdateResourceComponent = async () => {
+    if (!updateData.sourcedId.trim()) {
+      addToast('Please get data first by entering an ID and clicking Get Data', 'warning')
+      return
+    }
+
+    setIsLoadingUpdate(true)
+    try {
+      const payload = {
+        componentResource: {
+          sourcedId: updateData.sourcedId,
+          status: updateData.status,
+          title: updateData.title,
+          sortOrder: parseInt(updateData.sortOrder),
+          courseComponent: { sourcedId: updateData.courseComponent.sourcedId },
+          resource: { sourcedId: updateData.resource.sourcedId }
+        }
+      }
+
+      // This would be an API call to update resource component
+      const result = await handleApiCall(api.updateResourceComponent, updateData.sourcedId, payload)
+      setUpdateResult(result)
+      addToast('Resource component updated successfully!', 'success')
+    } catch (error) {
+      addToast('Error updating resource component', 'error')
+    } finally {
+      setIsLoadingUpdate(false)
+    }
+  }
+
+  const resetUpdateModal = () => {
+    setUpdateData({
+      sourcedId: "",
+      status: "",
+      title: "",
+      sortOrder: "",
+      courseComponent: { sourcedId: "" },
+      resource: { sourcedId: "" }
+    })
+    setUpdateResult(null)
+    setRawApiResponse(null)
+    setIsUpdateModalOpen(false)
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-slate-800">Link Resources to Components</h2>
         <div className="flex gap-2">
+          <button
+            onClick={() => setIsUpdateModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm transition-colors"
+          >
+            <Edit className="w-5 h-5" /> Update Resource Component
+          </button>
           <button
             onClick={() => {
               fetchResources(resourcePagination.currentPage)
@@ -402,6 +509,205 @@ export const LinkResources = () => {
                 {JSON.stringify(linkResult, null, 2)}
               </pre>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Resource Component Modal */}
+      {isUpdateModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-slate-800">Update Resource Component</h3>
+              <button
+                onClick={resetUpdateModal}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Search Section */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <label htmlFor="updateSourcedId" className="block text-sm font-medium text-slate-700 mb-2">
+                Resource Component ID
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="updateSourcedId"
+                  value={updateData.sourcedId}
+                  onChange={(e) => setUpdateData(prev => ({ ...prev, sourcedId: e.target.value }))}
+                  placeholder="Enter resource component ID..."
+                  className="flex-1 p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isLoadingUpdate}
+                />
+                <button
+                  onClick={handleGetResourceComponent}
+                  disabled={!updateData.sourcedId.trim() || isLoadingUpdate}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  {isLoadingUpdate ? 'Loading...' : 'Get Data'}
+                </button>
+              </div>
+            </div>
+
+            {/* Data Loaded Indicator */}
+            {(updateData.status || updateData.title || updateData.sortOrder || updateData.courseComponent.sourcedId || updateData.resource.sourcedId) && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700 font-medium mb-2">
+                  ✅ Data loaded successfully! You can now edit the fields below.
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs text-green-600">
+                  {updateData.status && <div>• Status: {updateData.status}</div>}
+                  {updateData.title && <div>• Title: {updateData.title.substring(0, 50)}...</div>}
+                  {updateData.sortOrder && <div>• Sort Order: {updateData.sortOrder}</div>}
+                  {updateData.courseComponent.sourcedId && <div>• Course Component: {updateData.courseComponent.sourcedId}</div>}
+                  {updateData.resource.sourcedId && <div>• Resource: {updateData.resource.sourcedId}</div>}
+                </div>
+              </div>
+            )}
+
+            {/* Debug Section - Raw API Response */}
+            {rawApiResponse && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <details>
+                  <summary className="text-sm font-medium text-yellow-800 cursor-pointer">
+                    🔧 Debug: Raw API Response (Click to expand)
+                  </summary>
+                  <pre className="mt-2 text-xs bg-white p-2 rounded border overflow-x-auto">
+                    {JSON.stringify(rawApiResponse, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            )}
+
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={updateData.status}
+                  onChange={(e) => setUpdateData(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isLoadingUpdate}
+                >
+                  <option value="">Select status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="tobedeleted">To Be Deleted</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={updateData.title}
+                  onChange={(e) => setUpdateData(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter title..."
+                  disabled={isLoadingUpdate}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Sort Order
+                </label>
+                <input
+                  type="number"
+                  value={updateData.sortOrder}
+                  onChange={(e) => setUpdateData(prev => ({ ...prev, sortOrder: e.target.value }))}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter sort order..."
+                  min="1"
+                  disabled={isLoadingUpdate}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Course Component ID
+                </label>
+                <input
+                  type="text"
+                  value={updateData.courseComponent.sourcedId}
+                  onChange={(e) => setUpdateData(prev => ({ 
+                    ...prev, 
+                    courseComponent: { ...prev.courseComponent, sourcedId: e.target.value }
+                  }))}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter course component ID..."
+                  disabled={isLoadingUpdate}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Resource ID
+                </label>
+                <input
+                  type="text"
+                  value={updateData.resource.sourcedId}
+                  onChange={(e) => setUpdateData(prev => ({ 
+                    ...prev, 
+                    resource: { ...prev.resource, sourcedId: e.target.value }
+                  }))}
+                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter resource ID..."
+                  disabled={isLoadingUpdate}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 justify-end mb-4">
+              <button
+                onClick={resetUpdateModal}
+                className="px-6 py-3 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+                disabled={isLoadingUpdate}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateResourceComponent}
+                disabled={!updateData.sourcedId.trim() || isLoadingUpdate}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                {isLoadingUpdate ? 'Updating...' : 'Update Resource Component'}
+              </button>
+            </div>
+
+            {/* Update Result */}
+            {updateResult && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-medium text-green-800 mb-2">Update Successful!</h4>
+                <div className="bg-white rounded p-3 border border-green-300">
+                  <pre className="text-xs overflow-x-auto">
+                    {JSON.stringify(updateResult, null, 2)}
+                  </pre>
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(JSON.stringify(updateResult, null, 2))
+                      addToast('Result copied to clipboard!', 'success')
+                    }}
+                    className="flex items-center gap-1 text-sm text-green-600 hover:text-green-800"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy Result
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
